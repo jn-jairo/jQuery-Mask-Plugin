@@ -506,11 +506,11 @@ $(document).ready(function(){
     typeAndBlur(testfieldDataMaskWithClearIfNotMatchAndOptionalMask, "1");
     equal( testfieldDataMaskWithClearIfNotMatchAndOptionalMask.val(), "" );
 
-    typeAndBlur(testfieldDataMaskWithClearIfNotMatchAndOptionalMask, "12");
-    equal( testfieldDataMaskWithClearIfNotMatchAndOptionalMask.val(), "12" );
+    typeAndBlur(testfieldDataMaskWithClearIfNotMatchAndOptionalMask, "192.168");
+    equal( testfieldDataMaskWithClearIfNotMatchAndOptionalMask.val(), "" );
 
-    typeAndBlur(testfieldDataMaskWithClearIfNotMatchAndOptionalMask, "123");
-    equal( testfieldDataMaskWithClearIfNotMatchAndOptionalMask.val(), "123" );
+    typeAndBlur(testfieldDataMaskWithClearIfNotMatchAndOptionalMask, "192.168.0.1");
+    equal( testfieldDataMaskWithClearIfNotMatchAndOptionalMask.val(), "192.168.0.1" );
 
     // javascript notation
     testfield.mask('009', {clearIfNotMatch: true});

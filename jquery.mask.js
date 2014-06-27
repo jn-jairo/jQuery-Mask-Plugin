@@ -148,21 +148,10 @@
 
                 // clear the value if it not complete the mask
                 el.on("focusout.mask", function() {
-                    if (options.clearIfNotMatch && p.val().length < p.requiredLength()) {
+                    if (options.clearIfNotMatch && p.val().length > 0 && !jMask.testMask()) {
                        p.val('');
                    }
                 });
-            },
-            requiredLength: function() {
-                var length = 0;
-
-                for (var i in mask) {
-                    if (jMask.translation[mask[i]].optional !== true) {
-                        length++;
-                    }
-                }
-
-                return length;
             },
             destroyEvents: function() {
                 el.off('keydown.mask keyup.mask paste.mask drop.mask change.mask blur.mask focusout.mask').removeData("changeCalled");
@@ -226,7 +215,9 @@
                     offset = 1, addMethod = "push",
                     resetPos = -1,
                     lastMaskChar,
-                    check;
+                    check,
+                    checkMatch,
+                    match = true;
 
                 if (options.reverse) {
                     addMethod = "unshift";
@@ -237,10 +228,16 @@
                     check = function () {
                         return m > -1 && v > -1;
                     };
+                    checkMatch = function () {
+                        return m > -1 && match;
+                    };
                 } else {
                     lastMaskChar = maskLen - 1;
                     check = function () {
                         return m < maskLen && v < valLen;
+                    };
+                    checkMatch = function () {
+                        return m < maskLen && match;
                     };
                 }
 
@@ -282,6 +279,31 @@
                     }
                 }
                 
+                while (checkMatch()) {
+                    var maskDigit = mask.charAt(m),
+                        translation = jMask.translation[maskDigit];
+                    
+                    m += offset;
+                    
+                    if (translation) {
+                        if (translation.optional) {
+                            continue;
+                        } else if (translation.recursive) {
+                            break;
+                        }
+                    } else {
+                        if (resetPos !== -1) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+                    
+                    match = false;
+                }
+                
+                jMask.match = match;
+                
                 var lastMaskCharDigit = mask.charAt(lastMaskChar);
                 if (maskLen === valLen + 1 && !jMask.translation[lastMaskCharDigit]) {
                     buf.push(lastMaskCharDigit);
@@ -322,6 +344,10 @@
         jMask.getCleanVal = function() {
            return p.getMasked(true);
         };
+        
+        jMask.testMask = function() {
+            return jMask.match ? true : false;
+        };
 
         jMask.init();
     };
@@ -343,6 +369,10 @@
 
     $.fn.cleanVal = function() {
         return $(this).data('mask').getCleanVal();
+    };
+
+    $.fn.testMask = function() {
+        return $(this).data('mask').testMask();
     };
 
     // looking for inputs with data-mask attribute
