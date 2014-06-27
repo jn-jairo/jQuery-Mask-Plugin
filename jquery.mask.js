@@ -65,6 +65,7 @@
 
             jMask.translation = $.extend({}, jMask.translation, options.translation);
             jMask = $.extend(true, {}, jMask, options);
+            jMask.pattern = p.getPattern();
 
             el.each(function() {
                 if (options.maxlength !== false) {
@@ -207,6 +208,62 @@
                     return p.callbacks(e);
                 }
             },
+            getPattern: function () {
+                var buf = [],
+                    m = 0, maskLen = mask.length,
+                    offset = 1, addMethod = "push",
+                    recursive = -1,
+                    optional = true,
+                    pattern,
+                    check,
+                    escaped = function(v) {
+                        return '.^$*+?()[]{}\\|'.indexOf(v) !== -1 ? '\\' + v : v; 
+                    };;
+
+                if (options.reverse) {
+                    check = function () {
+                        return m < maskLen;
+                    };
+                } else {
+                    addMethod = "unshift";
+                    offset = -1;
+                    m = maskLen - 1;
+                    check = function () {
+                        return m > -1;
+                    };
+                }
+
+                while (check()) {
+                    var maskDigit = mask.charAt(m),
+                        translation = jMask.translation[maskDigit];
+
+                    if (translation) {
+                        pattern = translation.pattern.toString();
+                        pattern = pattern.substring(1, pattern.length-1);
+                        if (translation.optional || translation.recursive) {
+                            pattern += '?';
+                        } else {
+                            optional = false;
+                        }
+                        if (translation.recursive) {
+                            if (recursive === -1) {
+                                pattern = options.reverse ? '(' + pattern : pattern + ')*';
+                                recursive = 0;
+                            }
+                        } else if (recursive === 0) {
+                            pattern = pattern = options.reverse ? pattern + ')*' : '(' + pattern;
+                            recursive = 1;
+                        }
+                        buf[addMethod](pattern);
+                    } else {
+                        buf[addMethod](escaped(maskDigit) + (optional ? '?' : ''));
+                    }
+
+                    m += offset;
+                }
+
+                return '^' + buf.join('') + '$';
+            },
             getMasked: function (skipMaskChars) {
                 var buf = [],
                     value = p.val(),
@@ -215,9 +272,7 @@
                     offset = 1, addMethod = "push",
                     resetPos = -1,
                     lastMaskChar,
-                    check,
-                    checkMatch,
-                    match = true;
+                    check;
 
                 if (options.reverse) {
                     addMethod = "unshift";
@@ -228,16 +283,10 @@
                     check = function () {
                         return m > -1 && v > -1;
                     };
-                    checkMatch = function () {
-                        return m > -1 && match;
-                    };
                 } else {
                     lastMaskChar = maskLen - 1;
                     check = function () {
                         return m < maskLen && v < valLen;
-                    };
-                    checkMatch = function () {
-                        return m < maskLen && match;
                     };
                 }
 
@@ -278,31 +327,6 @@
                         m += offset;
                     }
                 }
-                
-                while (checkMatch()) {
-                    var maskDigit = mask.charAt(m),
-                        translation = jMask.translation[maskDigit];
-                    
-                    m += offset;
-                    
-                    if (translation) {
-                        if (translation.optional) {
-                            continue;
-                        } else if (translation.recursive) {
-                            break;
-                        }
-                    } else {
-                        if (resetPos !== -1) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
-                    
-                    match = false;
-                }
-                
-                jMask.match = match;
                 
                 var lastMaskCharDigit = mask.charAt(lastMaskChar);
                 if (maskLen === valLen + 1 && !jMask.translation[lastMaskCharDigit]) {
@@ -346,7 +370,7 @@
         };
         
         jMask.testMask = function() {
-            return jMask.match ? true : false;
+            return p.val().match(jMask.pattern) ? true : false;
         };
 
         jMask.init();
